@@ -14,7 +14,7 @@ public class AggregatingJob {
 
   public static final String BOOTSTRAP_SERVERS = "broker:29092";
   public static final String INPUT_TOPIC = "source-event-stream";
-  public static final String GROUP_ID = "";
+  public static final String GROUP_ID = "agreement-aggregator-job";
   public static final String OUTPUT_TOPIC = "aggregated-agreements";
 
   public static void main(String[] args) throws Exception {
@@ -25,10 +25,10 @@ public class AggregatingJob {
     KafkaSink<Agreement> kafkaSink = buildKafkaSink();
 
     env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source")
-        .keyBy(Onboarding::getCorrelationId)
-        .window(GlobalWindows.create())
-        .trigger(new OnboardingCompletedTrigger())
-        .aggregate(new AggregatorFunction())
+        .keyBy(Onboarding::getCorrelationId) // group by clause equivalent
+        .window(GlobalWindows.create()) // not really windowing on time yet
+        .trigger(new OnboardingCompletedTrigger()) // smart trigger based on events received
+        .aggregate(new AggregatorFunction()) // dumb aggregator function joining all received events
         .sinkTo(kafkaSink);
 
     env.execute();
